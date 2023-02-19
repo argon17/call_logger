@@ -39,7 +39,8 @@ dependencies:
   call_log: ^4.0.0
   path_provider: ^2.0.12
   permission_handler: ^10.2.0
-  intl: ^0.18.0
+  intl: ^0.17.0
+  syncfusion_flutter_charts: ^20.4.50
 
 dev_dependencies:
   flutter_test:
