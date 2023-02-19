@@ -27,7 +27,7 @@ class CallLogsPage extends StatefulWidget {
 
 class CallLogsPageState extends State<CallLogsPage> {
   Future<void> _createCsvFile() async {
-    const String csvHeader = "Phone Number, Duration, Call Type\n";
+    const String csvHeader = "phone_number,duration,call_type,timestamp\n";
     final PermissionStatus permissionStatus = await _getPermission();
     if (permissionStatus == PermissionStatus.granted) {
       var directory = await Directory('/storage/emulated/0/Download/CallLogger')
@@ -40,7 +40,7 @@ class CallLogsPageState extends State<CallLogsPage> {
       Iterable<CallLogEntry> entries = await CallLog.get();
       for (var call in entries) {
         csvContent +=
-            "${call.number}, ${call.duration}, ${call.callType.toString()}\n";
+            "${call.number},${call.duration},${call.callType.toString()},${call.timestamp}\n";
       }
       // Write the CSV content to the file
       await csvFile.writeAsString(csvContent);
