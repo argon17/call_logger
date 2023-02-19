@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:call_log/call_log.dart';
 
@@ -26,6 +27,15 @@ class CallLogsPage extends StatefulWidget {
 }
 
 class CallLogsPageState extends State<CallLogsPage> {
+  Iterable<CallLogEntry> callLogEntries = const Iterable.empty();
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchCallLogs();
+  }
+
   Future<void> _createCsvFile() async {
     const String csvHeader = "phone_number,duration,call_type,timestamp\n";
     final PermissionStatus permissionStatus = await _getPermission();
@@ -93,17 +103,113 @@ class CallLogsPageState extends State<CallLogsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            foregroundColor: const Color(0xff000000),
-            backgroundColor: const Color(0xfff4c095),
+      appBar: AppBar(
+        title: const Text("call_logger"),
+        backgroundColor: Colors.white24,
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.file_download),
+            onPressed: () {
+              _createCsvFile();
+            },
           ),
-          onPressed: _createCsvFile,
-          child: const Text("Export Call Logs"),
+        ],
+      ),
+      body: Center(
+        child: ListView.builder(
+          itemCount: callLogEntries.length,
+          itemBuilder: (context, i) {
+            return ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 2.0),
+              title: Text(
+                callLogEntries.elementAt(i).number ?? "",
+                style: const TextStyle(color: Colors.white70),
+              ),
+              subtitle: Text(
+                getDateTimeStringFromTimeStamp(
+                    callLogEntries.elementAt(i).timestamp),
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              trailing: Text(
+                formatSeconds(callLogEntries.elementAt(i).duration ?? 0),
+                style: const TextStyle(color: Colors.white54),
+              ),
+              leading: Icon(
+                getIconDataFromCallType(callLogEntries.elementAt(i).callType),
+                color: Colors.white54,
+              ),
+            );
+          },
         ),
       ),
-      backgroundColor: const Color(0xff1d7874),
+      backgroundColor: const Color.fromARGB(255, 53, 61, 82),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white10,
+        currentIndex: _currentIndex,
+        selectedFontSize: 0,
+        onTap: (int newIndex) {
+          setState(() {
+            _currentIndex = newIndex;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            label: 'Home',
+            icon: Icon(Icons.home),
+          ),
+          BottomNavigationBarItem(
+            label: 'Stats',
+            icon: Icon(Icons.insights),
+          )
+        ],
+      ),
     );
   }
+
+  void fetchCallLogs() async {
+    final PermissionStatus permissionStatus = await _getPermission();
+    if (permissionStatus == PermissionStatus.granted) {
+      Iterable<CallLogEntry> fetchedEntries = await CallLog.get();
+      setState(() {
+        callLogEntries = fetchedEntries;
+      });
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => const AlertDialog(
+          title: Text("Permission Denied"),
+          content: Text("You must grant the necessary permissions"),
+        ),
+      );
+    }
+  }
+}
+
+IconData getIconDataFromCallType(CallType? callType) {
+  String callTypeString = callType.toString();
+  IconData iconData = Icons.call;
+  if (callTypeString.contains("missed")) {
+    iconData = Icons.call_missed;
+  } else if (callTypeString.contains("incoming")) {
+    iconData = Icons.call_received;
+  } else if (callTypeString.contains("outgoing")) {
+    iconData = Icons.call_made;
+  }
+  return iconData;
+}
+
+String getDateTimeStringFromTimeStamp(int? timestamp) {
+  String dateTimeString = "";
+  dateTimeString = DateFormat('yyyy-MM-dd hh:mm:ss')
+      .format(DateTime.fromMillisecondsSinceEpoch(timestamp ?? 0));
+  return dateTimeString;
+}
+
+String formatSeconds(int seconds) {
+  Duration duration = Duration(seconds: seconds);
+  int hours = duration.inHours;
+  int minutes = duration.inMinutes.remainder(60);
+  int secs = duration.inSeconds.remainder(60);
+  return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
 }
